@@ -41,12 +41,23 @@ def joongang(url: str) -> str:  # 중앙일보
 
     for article_part in raw_article:
         article_text += f'{article_part.text[3:]} '
-        
+
     return article_text
 
 
 def donga(url: str) -> str: # 동아일보
-    pass
+    resp = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(resp.text, 'lxml')
+
+    page_text = soup.find('div', 'article_txt').text.split('\n')
+    while True:
+        try:
+            page_text.remove('')
+        except:
+            break
+        
+    article_text = f'{page_text[0]}\n{page_text[1][2:]}'
+    return article_text
 
 
 #진보
