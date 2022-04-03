@@ -28,11 +28,21 @@ def chosun(url: str) -> str:    # 조선일보
             continue
         pure_articles.append(block['content'])
 
-    print('\n'.join(pure_articles))
+    return '\n'.join(pure_articles)
 
 
 def joongang(url: str) -> str:  # 중앙일보
-    pass
+    resp = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(resp.text, 'lxml')
+
+    page_text = soup.find('div', id='article_body')
+    raw_article = page_text.find_all('p')
+    article_text = ''
+
+    for article_part in raw_article:
+        article_text += f'{article_part.text[3:]} '
+        
+    return article_text
 
 
 def donga(url: str) -> str: # 동아일보
