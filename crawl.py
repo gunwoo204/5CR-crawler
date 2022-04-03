@@ -49,14 +49,23 @@ def donga(url: str) -> str: # 동아일보
     resp = requests.get(url, headers=HEADERS)
     soup = BeautifulSoup(resp.text, 'lxml')
 
-    page_text = soup.find('div', 'article_txt').text.split('\n')
+    page_text = soup.find('div', 'article_txt').findChildren(string=True)
     while True:
         try:
-            page_text.remove('')
+            page_text.remove('\n')
         except:
+            try:
+                page_text.remove(' ')
+            except:
+                break
+    
+    article_text = ''
+    for text in page_text:
+        if text[0] == '#':
             break
-        
-    article_text = f'{page_text[0]}\n{page_text[1][2:]}'
+        else:
+            article_text += text
+            
     return article_text
 
 
