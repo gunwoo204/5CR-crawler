@@ -71,7 +71,20 @@ def donga(url: str) -> str: # 동아일보
 
 #진보
 def hankyoreh(url: str) -> str: # 한겨레
-    pass
+    resp = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(resp.text, 'lxml')
+
+    page_text = soup.find('div', 'text').text.split('\n')
+    while True:
+        try:
+            page_text.remove('')
+        except:
+            break
+
+    article_text = ''
+    for text in page_text[1:]:
+        article_text += text
+    return article_text
 
 
 def kyunghyang(url: str) -> str:    # 경향신문
