@@ -128,7 +128,17 @@ def seoul(url: str) -> str: # 서울신문
 
 
 def hankook(url: str) -> str:   # 한국일보
-    pass
+    resp = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(resp.text, 'lxml')
+
+    page_text = soup.find_all('p', 'editor-p')
+
+    article_text = ''
+
+    for text in page_text:
+        article_text += text.text
+
+    return article_text
 
 
 def naeil(url: str) -> str: # 내일신문
