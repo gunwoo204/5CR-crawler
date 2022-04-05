@@ -141,5 +141,20 @@ def hankook(url: str) -> str:   # 한국일보
     return article_text
 
 
-def naeil(url: str) -> str: # 내일신문
-    pass
+def financial(url: str) -> str: # 파이낸셜뉴스
+    resp = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(resp.text, 'lxml')
+
+    page_text = soup.find('div', id='article_content').text.split('\n')
+
+    while True:
+        try:
+            page_text.remove('')
+        except:
+            break
+
+    article_text = ''
+    for text in page_text[4:-2]:
+        article_text += text
+
+    return article_text
