@@ -112,7 +112,19 @@ def vop(url: str) -> str:   # 민중의 소리
 
 #중도
 def seoul(url: str) -> str: # 서울신문
-    pass
+    resp = requests.get(url, headers=HEADERS)
+    resp.encoding = 'utf-8'
+    soup = BeautifulSoup(resp.text, 'lxml')
+
+    page_text = soup.find('div', id='atic_txt1').text.split('\n')
+
+    while True:
+        try:
+            page_text.remove('')
+        except:
+            break
+    
+    return page_text[1]
 
 
 def hankook(url: str) -> str:   # 한국일보
