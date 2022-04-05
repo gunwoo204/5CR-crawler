@@ -88,7 +88,16 @@ def hankyoreh(url: str) -> str: # 한겨레
 
 
 def kyunghyang(url: str) -> str:    # 경향신문
-    pass
+    resp = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(resp.text, 'lxml')
+
+    page_text = soup.find_all('p', 'content_text')
+
+    article_text = ''
+    for text in page_text:
+        raw_text = text.text.split('\n')
+        article_text += raw_text[1]
+    return article_text
 
 
 def vop(url: str) -> str:   # 민중의 소리
