@@ -101,7 +101,13 @@ def kyunghyang(url: str) -> str:    # 경향신문
 
 
 def vop(url: str) -> str:   # 민중의 소리
-    pass
+    resp = requests.get(url, headers=HEADERS)
+    resp.encoding = 'utf-8'
+    soup = BeautifulSoup(resp.text, 'lxml')
+
+    page_text = soup.find('div', 'editor').text
+
+    return page_text
 
 
 #중도
