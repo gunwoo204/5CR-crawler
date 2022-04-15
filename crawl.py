@@ -4,45 +4,65 @@ import json
 import requests
 from bs4 import BeautifulSoup
 
+from abc import ABC, abstractmethod
+
 HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.83 Safari/537.36',
 }
 
 
+class Company(ABC):
+    def set_resp(self, url, is_enc_UTF8=False):
+        self.resp = requests.get(url, headers=HEADERS)
+        self.soup = BeautifulSoup(self.resp.text, 'lxml')
+        if is_enc_UTF8:
+            self.resp.encoding = 'UTF-8'
+
+    @abstractmethod
+    def crawl(self, url):
+        pass
+
+
 # 보수
-def chosun(url: str) -> str:    # 조선일보
-    resp = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(resp.text, 'lxml')
+class Chosun(Company):
+    def crawl(self, url):
+        self.set_resp(url, True)
+        page_text = self.soup.find('script', id='fusion-metadata').text
 
-    page_text = soup.find('script', id='fusion-metadata').text
+        semicolon_indexs = result = [_.start() for _ in re.finditer(';', page_text)]  # 세미콜론 위치(index) 모두 가져옴
+        quote_indexs = result = [_.start() for _ in re.finditer('"', page_text)]
 
-    semicolon_indexs = result = [_.start() for _ in re.finditer(';', page_text)]  # 세미콜론 위치(index) 모두 가져옴
-    global_content = page_text[semicolon_indexs[3]:semicolon_indexs[4]].replace(';Fusion.globalContent=', '')  # semicolon 4~5번째 사이의 내용을 가져와서 변수명 삭제
-    content = json.loads(global_content)  # 그럼 json으로 만들 수 있음
+        for i in range(0, int(len(quote_indexs)/2)):
+            for j in semicolon_indexs:
+                if quote_indexs[2 * i] < j < quote_indexs[2 * i + 1]:
+                    semicolon_indexs.remove(j)
 
-    article_contents = content['content_elements']  # 기사 본문
+        global_content = page_text[semicolon_indexs[3]:semicolon_indexs[4]].replace(';Fusion.globalContent=', '')  # semicolon 4~5번째 사이의 내용을 가져와서 변수명 삭제
+        content = json.loads(global_content)  # 그럼 json으로 만들 수 있음
 
-    pure_articles = []
-    for block in article_contents:
-        if 'content' not in block:  # 이미지 block은 content가 없음
-            continue
-        pure_articles.append(block['content'])
+        article_contents = content['content_elements']  # 기사 본문
 
-    return '\n'.join(pure_articles)
+        pure_articles = []
+        for block in article_contents:
+            if 'content' not in block:  # 이미지 block은 content가 없음
+                continue
+            pure_articles.append(block['content'])
+
+        return '\n'.join(pure_articles).replace('<br/>', '').replace('\n', ' ')
 
 
-def joongang(url: str) -> str:  # 중앙일보
-    resp = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(resp.text, 'lxml')
+class Joongang(Company):
+    def crawl(self, url):
+        self.set_resp(url)
 
-    page_text = soup.find('div', id='article_body')
-    raw_article = page_text.find_all('p')
-    article_text = ''
+        page_text = self.soup.find('div', id='article_body')
+        raw_article = page_text.find_all('p')
+        article_text = ''
 
-    for article_part in raw_article:
-        article_text += f'{article_part.text[3:]} '
+        for article_part in raw_article:
+            article_text += f'{article_part.text[3:]} '
 
-    return article_text
+        return article_text
 
 
 def donga(url: str) -> str: # 동아일보
