@@ -14,8 +14,11 @@ if __name__ == '__main__':
     i = 0
     for url in urls[0:100]:
         print(f'{i} {url}')
-        crawl_data = chosun_crawler.crawl(url)
-        f.write(crawl_data)
-        f.write('\n')
+        try:
+            crawl_data = chosun_crawler.crawl(url)
+            f.write(crawl_data)
+            f.write('\n')
+        except:
+            f.write(f'!!!ERROR!!!  {i} {url}\n')
         i += 1
     f.close()
