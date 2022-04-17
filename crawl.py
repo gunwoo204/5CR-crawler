@@ -81,7 +81,6 @@ class Donga(Company): # 동아일보
         raw_page_text = self.soup.find('div', 'article_txt').findChildren(string=True)
         remove_elements(raw_page_text, '\n')
         remove_elements(raw_page_text, ' ')
-        print(raw_page_text)
         
         for line_element in raw_page_text:
             if line_element[0] == '#':
