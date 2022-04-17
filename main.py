@@ -1,24 +1,59 @@
-from time import sleep
+from tqdm import tqdm
 import pandas as pd
 import crawl
 
 
+def select_crawler(company: str):
+    if company == 'chosun':
+        return crawl.Chosun()
+    elif company == 'joongang':
+        return crawl.Joongang()
+    elif company == 'donga':
+        return crawl.Donga()
+    elif company == 'hankyoreh':
+        return crawl.Hankyoreh()
+    elif company == 'kyunghyang':
+        return crawl.Kyunghyang()
+    elif company == 'vop':
+        return crawl.Vop()
+    elif company == 'seoul':
+        return crawl.Seoul()
+    elif company == 'hankook':
+        return crawl.Hankook()
+    else:
+        return '''
+        !!!ERROR!!!\tCompany name does not exist
+        \tChoose one from the below
+        \t[chosun joongang donga hankyoreh kyunghyang vop seoul hankook]
+        '''
+
+
 if __name__ == '__main__':
-    newspaper = 'chosun'
-    opinion_list = pd.read_csv(f'data/{newspaper}-opinion.csv')
-    f = open(f'data/{newspaper}-text.txt', 'w', encoding='UTF-8')
+    company = input('[chosun joongang donga hankyoreh kyunghyang vop seoul hankook]\nselect company: ')
+    crawler = select_crawler(company)
 
-    urls = opinion_list['URL']
+    if type(crawler) == str:
+        print(crawler)
+        
+    else:
+        opinion_list = pd.read_csv(f'data/{company}-opinion.csv')
+        urls = opinion_list['URL']
 
-    chosun_crawler = crawl.Chosun()
-    i = 0
-    for url in urls[0:100]:
-        print(f'{i} {url}')
-        try:
-            crawl_data = chosun_crawler.crawl(url)
-            f.write(crawl_data)
-            f.write('\n')
-        except:
-            f.write(f'!!!ERROR!!!  {i} {url}\n')
-        i += 1
-    f.close()
+        f = open(f'data/{company}-text.txt', 'w', encoding='UTF-8')
+        # n = len(urls)
+        n = 20
+        success_counter = 0
+
+        for url in tqdm(urls[0:n], desc='CRAWLING PROGRESS'):
+            try:
+                crawler.crawl(url)
+                f.write(crawler.page_text)
+                f.write('\n')
+                success_counter += 1
+            except:
+                f.write('\n')
+        
+        print('\n----------CRAWLING END----------')
+        print(f'# of articles ATTEMPTED to crawl: {n}')
+        print(f'# of articles SUCCEEDED to crawl: {success_counter}\n')
+        f.close()
