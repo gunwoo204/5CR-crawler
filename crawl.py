@@ -1,5 +1,7 @@
 import re
 import json
+import random
+import time
 
 import requests
 from bs4 import BeautifulSoup
@@ -21,6 +23,7 @@ def remove_elements(origin: list, word: str):
 
 class Company(ABC):
     def set_resp(self, url, is_enc_UTF8=True):
+        time.sleep(random.random()/2)
         self.page_text = ''
         self.resp = requests.get(url, headers=HEADERS)
         if not is_enc_UTF8:
