@@ -21,6 +21,7 @@ def remove_elements(origin: list, word: str):
 
 class Company(ABC):
     def set_resp(self, url, is_enc_UTF8=True):
+        self.page_text = ''
         self.resp = requests.get(url, headers=HEADERS)
         if not is_enc_UTF8:
             self.resp.encoding = 'UTF-8'
@@ -32,7 +33,6 @@ class Company(ABC):
 
     def __init__(self) -> None:
         super().__init__()
-        self.page_text = ''
 
 
 # 보수
