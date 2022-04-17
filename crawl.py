@@ -11,33 +11,45 @@ HEADERS = {
 }
 
 
+def remove_elements(origin: list, word: str):
+    while True:
+        try:
+            origin.remove(word)
+        except:
+            break
+
+
 class Company(ABC):
-    def set_resp(self, url, is_enc_UTF8=False):
+    def set_resp(self, url, is_enc_UTF8=True):
         self.resp = requests.get(url, headers=HEADERS)
-        self.soup = BeautifulSoup(self.resp.text, 'lxml')
-        if is_enc_UTF8:
+        if not is_enc_UTF8:
             self.resp.encoding = 'UTF-8'
+        self.soup = BeautifulSoup(self.resp.text, 'lxml')
 
     @abstractmethod
     def crawl(self, url):
         pass
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.page_text = ''
+
 
 # 보수
-class Chosun(Company):
+class Chosun(Company):  # 조선일보
     def crawl(self, url):
-        self.set_resp(url, True)
-        page_text = self.soup.find('script', id='fusion-metadata').text
+        self.set_resp(url)
+        raw_page_text = self.soup.find('script', id='fusion-metadata').text
 
-        semicolon_indexs = result = [_.start() for _ in re.finditer(';', page_text)]  # 세미콜론 위치(index) 모두 가져옴
-        quote_indexs = result = [_.start() for _ in re.finditer('"', page_text)]
+        semicolon_indexs = result = [_.start() for _ in re.finditer(';', raw_page_text)]  # 세미콜론 위치(index) 모두 가져옴
+        quote_indexs = result = [_.start() for _ in re.finditer('"', raw_page_text)]
 
         for i in range(0, int(len(quote_indexs)/2)):
             for j in semicolon_indexs:
                 if quote_indexs[2 * i] < j < quote_indexs[2 * i + 1]:
                     semicolon_indexs.remove(j)
 
-        global_content = page_text[semicolon_indexs[3]:semicolon_indexs[4]].replace(';Fusion.globalContent=', '')  # semicolon 4~5번째 사이의 내용을 가져와서 변수명 삭제
+        global_content = raw_page_text[semicolon_indexs[3]:semicolon_indexs[4]].replace(';Fusion.globalContent=', '')  # semicolon 4~5번째 사이의 내용을 가져와서 변수명 삭제
         content = json.loads(global_content)  # 그럼 json으로 만들 수 있음
 
         article_contents = content['content_elements']  # 기사 본문
@@ -48,133 +60,75 @@ class Chosun(Company):
                 continue
             pure_articles.append(block['content'])
 
-        return '\n'.join(pure_articles).replace('<br/>', '').replace('\n', ' ')
+        self.page_text = '\n'.join(pure_articles).replace('<br/>', '').replace('\n', ' ')
 
 
-class Joongang(Company):
+class Joongang(Company):    # 중앙일보
     def crawl(self, url):
         self.set_resp(url)
 
-        page_text = self.soup.find('div', id='article_body')
-        raw_article = page_text.find_all('p')
-        article_text = ''
-
-        for article_part in raw_article:
-            article_text += f'{article_part.text[3:]} '
-
-        return article_text
+        raw_page_text = self.soup.find('div', id='article_body')
+        raw_article = raw_page_text.find_all('p')
+        
+        for line_element in raw_article:
+            self.page_text += f'{line_element.text[3:]} '
 
 
-def donga(url: str) -> str: # 동아일보
-    resp = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(resp.text, 'lxml')
+class Donga(Company): # 동아일보
+    def crawl(self, url):
+        self.set_resp(url)
 
-    page_text = soup.find('div', 'article_txt').findChildren(string=True)
-    while True:
-        try:
-            page_text.remove('\n')
-        except:
-            try:
-                page_text.remove(' ')
-            except:
+        raw_page_text = self.soup.find('div', 'article_txt').findChildren(string=True)
+        remove_elements(raw_page_text, '\n')
+        remove_elements(raw_page_text, ' ')
+        print(raw_page_text)
+        
+        for line_element in raw_page_text:
+            if line_element[0] == '#':
                 break
-    
-    article_text = ''
-    for text in page_text:
-        if text[0] == '#':
-            break
-        else:
-            article_text += text
-            
-    return article_text
+            else:
+                self.page_text += line_element
 
 
 #진보
-def hankyoreh(url: str) -> str: # 한겨레
-    resp = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(resp.text, 'lxml')
+class Hankyoreh(Company): # 한겨레
+    def crawl(self, url):
+        self.set_resp(url)
 
-    page_text = soup.find('div', 'text').text.split('\n')
-    while True:
-        try:
-            page_text.remove('')
-        except:
-            break
+        raw_page_text = self.soup.find('div', 'text').text.split('\n')
+        remove_elements(raw_page_text, '')
 
-    article_text = ''
-    for text in page_text[1:]:
-        article_text += text
-    return article_text
+        for line_element in raw_page_text[1:]:
+            self.page_text += line_element
 
 
-def kyunghyang(url: str) -> str:    # 경향신문
-    resp = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(resp.text, 'lxml')
+class Kyunghyang(Company):    # 경향신문
+    def crawl(self, url):
+        self.set_resp(url)
 
-    page_text = soup.find_all('p', 'content_text')
+        raw_page_text = self.soup.find_all('p', 'content_text')
 
-    article_text = ''
-    for text in page_text:
-        raw_text = text.text.split('\n')
-        article_text += raw_text[1]
-    return article_text
+        for line_element in raw_page_text:
+            self.page_text += line_element.text.split('\n')[1]
 
 
-def vop(url: str) -> str:   # 민중의 소리
-    resp = requests.get(url, headers=HEADERS)
-    resp.encoding = 'utf-8'
-    soup = BeautifulSoup(resp.text, 'lxml')
-
-    page_text = soup.find('div', 'editor').text
-
-    return page_text
+class Vop(Company):   # 민중의 소리
+    def crawl(self, url):
+        full_url = f'http://vop.co.kr{url}'
+        self.set_resp(full_url, False)
+        self.page_text = self.soup.find('div', 'editor').text.replace('\n', '')
 
 
 #중도
-def seoul(url: str) -> str: # 서울신문
-    resp = requests.get(url, headers=HEADERS)
-    resp.encoding = 'utf-8'
-    soup = BeautifulSoup(resp.text, 'lxml')
-
-    page_text = soup.find('div', id='atic_txt1').text.split('\n')
-
-    while True:
-        try:
-            page_text.remove('')
-        except:
-            break
-    
-    return page_text[1]
+class Seoul(Company): # 서울신문
+    def crawl(self, url):
+        self.set_resp(url, False)
+        self.page_text = remove_elements(self.soup.find('div', id='atic_txt1').text.split('\n'), '')[0]
 
 
-def hankook(url: str) -> str:   # 한국일보
-    resp = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(resp.text, 'lxml')
-
-    page_text = soup.find_all('p', 'editor-p')
-
-    article_text = ''
-
-    for text in page_text:
-        article_text += text.text
-
-    return article_text
-
-
-def financial(url: str) -> str: # 파이낸셜뉴스
-    resp = requests.get(url, headers=HEADERS)
-    soup = BeautifulSoup(resp.text, 'lxml')
-
-    page_text = soup.find('div', id='article_content').text.split('\n')
-
-    while True:
-        try:
-            page_text.remove('')
-        except:
-            break
-
-    article_text = ''
-    for text in page_text[4:-2]:
-        article_text += text
-
-    return article_text
+class Hankook(Company):   # 한국일보
+    def crawl(self, url):
+        self.set_resp(url)
+        raw_page_text = self.soup.find_all('p', 'editor-p')
+        for text in raw_page_text:
+            self.page_text += text.text
